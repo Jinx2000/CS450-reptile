@@ -72,6 +72,10 @@ You can run the entire workflow using the `Facade.py` script, which acts as the 
 
 #### Command:
 ```bash
+python3 Facade.py
+```
+or
+```bash
 python3 Facade.py --url <website_url>
 ```
 ### Arguments:
