@@ -27,34 +27,40 @@ The program is designed to streamline the process of converting raw HTML into a 
 
 The program is split into multiple scripts, each handling a specific step in the workflow:
 
-### 1. `simple_spider.py`
+### 1. [simple_spider.py](lib/simple_spider.py)
 - Fetches the HTML content from the provided URL.
 - Extracts only the `<div class="td-content">` sections.
-- Saves the raw HTML to an intermediate file.
+- Saves the raw HTML to an intermediate file in the `data/` folder.
 
-### 2. `clean_html_links.py`
+### 2. [clean_html_links.py](lib/clean_html_links.py)
 - Removes all `<a>` tags while keeping the text inside them.
-- Outputs cleaned HTML content.
+- Outputs cleaned HTML content to an intermediate file in the `data/` folder.
 
-### 3. `extract_h2.py`
+### 3. [extract_h2.py](lib/extract_h2.py)
 - Extracts `<h2>` sections along with their associated content.
-- Outputs the extracted content in chunks.
+- Organizes content into logical chunks based on headings.
+- Outputs the extracted content to an intermediate file in the `data/` folder.
 
-### 4. `extract_code_example.py`
-- Extracts code blocks (`<code>` tags) and determines which to keep based on specific conditions.
-- Inserts placeholders for removed code blocks and appends kept blocks for further processing.
+### 4. [extract_code_example.py](lib/extract_code_example.py)
+- Extracts code blocks (`<code>` tags) from the HTML and evaluates which to keep based on specific conditions.
+- Inserts placeholders for removed code blocks and appends kept code blocks for further processing.
+- Saves the modified output to an intermediate file in the `data/` folder.
 
-### 5. `clean_all_tags_and_newline.py`
-- Removes all remaining HTML tags.
+### 5. [clean_all_tags_and_newline.py](lib/clean_all_tags_and_newline.py)
+- Removes all remaining HTML tags from the text.
 - Ensures that each sentence ends with a newline for better readability.
+- Outputs the cleaned content to an intermediate file in the `data/` folder.
 
-### 6. `final_refine.py`
-- Performs additional formatting, such as handling special cases and ensuring clean output.
+### 6. [final_refine.py](lib/final_refine.py)
+- Performs additional formatting and text refinements, such as handling edge cases.
+- Prepares the text for CSV conversion.
+- Outputs the refined text to an intermediate file in the `data/` folder.
 
-### 7. `to_csv.py`
-- Converts the final processed text into a structured CSV file.
-- Dynamically generates the category column based on the URL.
-- Includes the reference URL in the CSV.
+### 7. [to_csv.py](lib/to_csv.py)
+- Converts the fully processed text into a structured CSV file.
+- Dynamically generates the `category` column based on the URL (e.g., `Kubernetes_ingress`).
+- Includes the reference URL provided in the `Facade.py` as the `reference` column in the CSV.
+- Saves the final CSV file as `final_output.csv` in the `data/` folder.
 
 ---
 
