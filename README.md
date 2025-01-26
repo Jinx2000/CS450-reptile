@@ -67,7 +67,7 @@ You can run the entire workflow using the `Facade.py` script, which acts as the 
 #### Command:
 ```bash
 python3 Facade.py --url <website_url>
-
+```
 ### Arguments:
 
 #### `--url`:
@@ -76,12 +76,12 @@ python3 Facade.py --url <website_url>
 #### Example:
 ```bash
 python3 Facade.py --url https://kubernetes.io/docs/concepts/services-networking/gateway/
-
+```
 ### Output:
 
 - The program creates a `data/` folder in the project directory to store all intermediate files.
 - The final output CSV file is saved as: 
 ```bash
 data/final_output.csv
-
+```
 
