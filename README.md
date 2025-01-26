@@ -95,3 +95,28 @@ python3 Facade.py --url https://kubernetes.io/docs/concepts/services-networking/
 data/final_output.csv
 ```
 
+## Dependencies
+
+### Python Libraries
+- **`requests`**: For fetching HTML from the web.
+- **`beautifulsoup4`**: For parsing and processing HTML content.
+- **`re`**: For regex-based text processing (built into Python, no installation required).
+- **`csv`**: For generating the final CSV output (built into Python, no installation required).
+- **`argparse`**: For handling command-line arguments (built into Python, no installation required).
+
+### Install Dependencies
+Install all required libraries using:
+```bash
+pip install -r requirements.txt
+```
+
+## Troubleshooting
+
+1. **Error: `No such file or directory`**
+   - Ensure all scripts are located in the `lib/` folder and the `data/` folder exists in the root directory.
+
+2. **Intermediate Files Missing**
+   - Check the output of each script in the `data/` folder. Verify that each script processes its input correctly.
+
+3. **Empty CSV File**
+   - Ensure the URL provided to `Facade.py` is valid and contains `<div class="td-content">` sections.
