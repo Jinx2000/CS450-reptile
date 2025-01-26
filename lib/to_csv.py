@@ -2,26 +2,19 @@ import re
 import csv
 import argparse
 
-DEFAULT_CATEGORY = "Kubernetes Ingress"
-
 CHUNK_PATTERN = re.compile(
     r"(===== CATEGORY CHUNK #\d+ =====.*?========================================)",
     re.DOTALL
 )
 
 def remove_separators(text: str) -> str:
-    """
-    Remove lines containing '===' or '========================================' from the text.
-    """
+    """Remove lines containing '===' or '========================================' from the text."""
     lines = text.splitlines()
     filtered_lines = [line for line in lines if "===" not in line and "========================================" not in line]
     return "\n".join(filtered_lines)
 
-def parse_chunk(chunk_text: str):
-    """
-    Parse CATEGORY CHUNK text to extract title, content, usage examples, etc.
-    Returns a list of dictionaries.
-    """
+def parse_chunk(chunk_text: str, category: str):
+    """Parse CATEGORY CHUNK text to extract title, content, usage examples, etc."""
     title_match = re.search(r"\[\d+\]\s*Category Title:\s*(.*?)(?=\n|Content:)", chunk_text)
     title_str = title_match.group(1).strip() if title_match else "Unknown Title"
 
@@ -48,7 +41,7 @@ def parse_chunk(chunk_text: str):
             "title": title_str,
             "content": content_cleaned,
             "usage_example": "None",
-            "category": DEFAULT_CATEGORY,
+            "category": category,
             "tags": "None",
             "reference": "None"
         }]
@@ -60,7 +53,7 @@ def parse_chunk(chunk_text: str):
             "title": title_str,
             "content": content_cleaned,
             "usage_example": "None",
-            "category": DEFAULT_CATEGORY,
+            "category": category,
             "tags": "None",
             "reference": "None"
         }]
@@ -79,11 +72,6 @@ def parse_chunk(chunk_text: str):
         else:
             current_block_index = int(part.strip())
             content_for_block[current_block_index] = ""
-
-    placeholders_found = placeholder_re.findall(modified_text)
-    if placeholders_found and split_parts[0].strip():
-        first_block_idx = int(placeholders_found[0])
-        content_for_block[first_block_idx] = split_parts[0].strip() + "\n" + content_for_block[first_block_idx]
 
     block_usage_pattern = re.compile(
         r"\[Code Block\s+(\d+)\]:\s*(.*?)(?=\n\[Code Block\s+\d+\]:|$)",
@@ -107,7 +95,7 @@ def parse_chunk(chunk_text: str):
             "title": title_str,
             "content": cleaned_content,
             "usage_example": cleaned_usage,
-            "category": DEFAULT_CATEGORY,
+            "category": category,
             "tags": "None",
             "reference": "None"
         })
@@ -118,22 +106,20 @@ def parse_chunk(chunk_text: str):
             "title": title_str,
             "content": cleaned_content,
             "usage_example": "None",
-            "category": DEFAULT_CATEGORY,
+            "category": category,
             "tags": "None",
             "reference": "None"
         }]
 
     return documents
 
-def process_file_to_csv(input_file: str, output_file: str):
-    """
-    Reads a text file containing CATEGORY CHUNK sections and writes them to a CSV file.
-    """
+def process_file_to_csv(input_file: str, output_file: str, category: str):
+    """Reads a text file containing CATEGORY CHUNK sections and writes them to a CSV file."""
     with open(input_file, "r", encoding="utf-8") as infile:
         all_text = infile.read()
 
     chunks = CHUNK_PATTERN.findall(all_text)
-    all_documents = [doc for chunk in chunks for doc in parse_chunk(chunk)]
+    all_documents = [doc for chunk in chunks for doc in parse_chunk(chunk, category)]
 
     with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile, quoting=csv.QUOTE_ALL)
@@ -154,6 +140,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert processed CATEGORY CHUNK text to a CSV format.")
     parser.add_argument("--input", type=str, required=True, help="Path to the input text file.")
     parser.add_argument("--output", type=str, required=True, help="Path to the output CSV file.")
+    parser.add_argument("--category", type=str, required=True, help="Category name to assign to each document.")
     args = parser.parse_args()
 
-    process_file_to_csv(args.input, args.output)
+    process_file_to_csv(args.input, args.output, args.category)
