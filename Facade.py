@@ -49,8 +49,14 @@ def run_workflow(website_url):
         # Step 6: Run the final_refine.py script
         subprocess.run(["python3", "lib/final_refine.py", "--input", clean_tags_output, "--output", refined_output], check=True)
 
-        # Step 7: Run the to_csv.py script, passing the dynamic category
-        subprocess.run(["python3", "lib/to_csv.py", "--input", refined_output, "--output", final_csv, "--category", category], check=True)
+        # Step 7: Run the to_csv.py script, passing the dynamic category and reference URL
+        subprocess.run([
+            "python3", "lib/to_csv.py", 
+            "--input", refined_output, 
+            "--output", final_csv, 
+            "--category", category, 
+            "--reference", website_url
+        ], check=True)
 
         print(f"Workflow complete! Final output saved to {final_csv}")
     except subprocess.CalledProcessError as e:

@@ -13,7 +13,7 @@ def remove_separators(text: str) -> str:
     filtered_lines = [line for line in lines if "===" not in line and "========================================" not in line]
     return "\n".join(filtered_lines)
 
-def parse_chunk(chunk_text: str, category: str):
+def parse_chunk(chunk_text: str, category: str, reference: str):
     """Parse CATEGORY CHUNK text to extract title, content, usage examples, etc."""
     title_match = re.search(r"\[\d+\]\s*Category Title:\s*(.*?)(?=\n|Content:)", chunk_text)
     title_str = title_match.group(1).strip() if title_match else "Unknown Title"
@@ -43,7 +43,7 @@ def parse_chunk(chunk_text: str, category: str):
             "usage_example": "None",
             "category": category,
             "tags": "None",
-            "reference": "None"
+            "reference": reference
         }]
 
     kept_section_match = re.search(r"(=== Kept\s*\d+\s*Code Block\(s\) ===.*)", chunk_text, re.DOTALL)
@@ -55,7 +55,7 @@ def parse_chunk(chunk_text: str, category: str):
             "usage_example": "None",
             "category": category,
             "tags": "None",
-            "reference": "None"
+            "reference": reference
         }]
 
     kept_section = kept_section_match.group(1)
@@ -97,7 +97,7 @@ def parse_chunk(chunk_text: str, category: str):
             "usage_example": cleaned_usage,
             "category": category,
             "tags": "None",
-            "reference": "None"
+            "reference": reference
         })
 
     if not documents:
@@ -108,18 +108,18 @@ def parse_chunk(chunk_text: str, category: str):
             "usage_example": "None",
             "category": category,
             "tags": "None",
-            "reference": "None"
+            "reference": reference
         }]
 
     return documents
 
-def process_file_to_csv(input_file: str, output_file: str, category: str):
+def process_file_to_csv(input_file: str, output_file: str, category: str, reference: str):
     """Reads a text file containing CATEGORY CHUNK sections and writes them to a CSV file."""
     with open(input_file, "r", encoding="utf-8") as infile:
         all_text = infile.read()
 
     chunks = CHUNK_PATTERN.findall(all_text)
-    all_documents = [doc for chunk in chunks for doc in parse_chunk(chunk, category)]
+    all_documents = [doc for chunk in chunks for doc in parse_chunk(chunk, category, reference)]
 
     with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile, quoting=csv.QUOTE_ALL)
@@ -141,6 +141,7 @@ if __name__ == "__main__":
     parser.add_argument("--input", type=str, required=True, help="Path to the input text file.")
     parser.add_argument("--output", type=str, required=True, help="Path to the output CSV file.")
     parser.add_argument("--category", type=str, required=True, help="Category name to assign to each document.")
+    parser.add_argument("--reference", type=str, required=True, help="Reference URL to include in the CSV.")
     args = parser.parse_args()
 
-    process_file_to_csv(args.input, args.output, args.category)
+    process_file_to_csv(args.input, args.output, args.category, args.reference)
