@@ -14,9 +14,6 @@ A streamlined pipeline to scrape, clean, annotate links, and convert Kubernetes 
    - [Multiple URLs](#multiple-urls)
 6. [Dependencies](#6-dependencies)
 7. [Troubleshooting](#7-troubleshooting)
-8. [Contributing](#8-contributing)
-9. [License](#9-license)
-10. [Contact](#10-contact)
 
 
 ---
@@ -130,14 +127,14 @@ The workflow is executed in sequential steps. When you run Facade.py, it will:
 ### A. Single URL
 
 Run the workflow end-to-end for a single URL with Facade.py:
-
-python3 Facade.py --url https://kubernetes.io/docs/concepts/services-networking/ingress/
-
+```bash
+python3 Facade.py 
+```
 Arguments:
 - --url: The URL to scrape. Defaults to https://kubernetes.io/docs/concepts/services-networking/ingress/ if not provided.
 
 Outputs:
-- Intermediate files in data/stepN_...
+- Intermediate files in data/...
 - A final CSV: data/final_output_Kubernetes_ingress.csv (or equivalent category based on the URL).
 
 ### B. Multiple URLs
@@ -146,16 +143,16 @@ For processing multiple URLs, use Multi_facade.py:
 
 1. Create (or edit) a text file with one URL per line, e.g., data/multi_url.txt.
 2. Run:
-
-python3 Multi_facade.py --input data/multi_url.txt --output data/multi_final.csv
-
+```bash
+python3 Multi_facade.py 
+```
 - --input: Points to the file containing multiple URLs (defaults to data/multi_url.txt).
 - --output: The combined CSV with data from all URLs (defaults to data/multi_final.csv).
 
 Process:
 1. For each URL, Multi_facade.py calls Facade.py internally.
-2. It moves each final CSV (e.g., final_output_Kubernetes_ingress.csv, etc.) to a temporary folder.
-3. Once all URLs are processed, it combines them into a single CSV file.
+2. It moves each final CSV (e.g., final_output_Kubernetes_ingress.csv, etc.) to a temporary folder data/multi_temp_csv/.
+3. Once all URLs are processed, it combines them into a single CSV file `multi_final.csv`.
 
 ---
 
@@ -169,9 +166,9 @@ Process:
 - shutil (built-in) – Used in Multi_facade.py for folder operations.
 
 Installation:
-
+```bash
 pip install -r requirements.txt
-
+```
 ---
 
 ## 7. Troubleshooting
@@ -193,28 +190,3 @@ pip install -r requirements.txt
 
 ---
 
-## 8. Contributing
-
-We welcome contributions! You can:
-- Report bugs or suggest features via GitHub issues.
-- Create pull requests to fix issues or add new functionality.
-Please follow any existing templates and guidelines when submitting.
-
----
-
-## 9. License
-
-(Insert your preferred license here, e.g., MIT License. For example:)
-
-MIT License
-[Full License Text...]
-
----
-
-## 10. Contact
-
-For questions, suggestions, or feedback:
-- GitHub Issues: https://github.com/YourUserName/YourRepo
-- Email: youremail@example.com
-
-Happy scraping and annotating!
