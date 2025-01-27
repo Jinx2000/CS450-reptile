@@ -25,7 +25,7 @@ def run_workflow(website_url):
     extract_code_output = "data/step4_extract_code_output.txt"
     clean_tags_output = "data/step5_clean_tags_output.txt"
     refined_output = "data/step6_final_refine_output.txt"
-    final_csv = "data/final_output.csv"
+    initial_csv = "data/output_initial.csv"
 
     # Extract the category from the URL
     category = extract_category_from_url(website_url)
@@ -49,13 +49,21 @@ def run_workflow(website_url):
         # Step 6: Run the final_refine.py script
         subprocess.run(["python3", "lib/final_refine.py", "--input", clean_tags_output, "--output", refined_output], check=True)
 
-        # Step 7: Run the to_csv.py script, passing the dynamic category and reference URL
+        # Step 7: Generate initial CSV with to_csv.py
         subprocess.run([
             "python3", "lib/to_csv.py", 
             "--input", refined_output, 
-            "--output", final_csv, 
+            "--output", initial_csv, 
             "--category", category, 
             "--reference", website_url
+        ], check=True)
+
+        # Step 8: Add links to the final CSV
+        final_csv = f"data/final_output_{category}.csv"
+        subprocess.run([
+            "python3", "lib/add_link_to.py", 
+            "--input", initial_csv, 
+            "--output", final_csv
         ], check=True)
 
         print(f"Workflow complete! Final output saved to {final_csv}")
