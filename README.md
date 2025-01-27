@@ -1,122 +1,219 @@
 # Kubernetes Documentation Processing Workflow
 
----
-
-## Purpose
-
-This project automates the process of extracting, cleaning, and transforming documentation from a Kubernetes-related website into a structured CSV file. The primary goal is to:
-- Scrape and parse the relevant documentation from the web.
-- Clean up the extracted content by removing unnecessary HTML tags and links.
-- Organize the content into logical chunks, including code examples.
-- Output a CSV file containing structured information such as title, content, usage examples, category, tags, and reference URL.
-
-The program is designed to streamline the process of converting raw HTML into a clean, organized dataset for further use in knowledge bases or other documentation tools.
+A streamlined pipeline to scrape, clean, annotate links, and convert Kubernetes documentation (or related content) into a structured CSV file. This workflow makes it easy to reuse extracted information for knowledge bases or other documentation tools.
 
 ---
 
-## Key Features
-
-1. **Dynamic Category Assignment**: The category column in the CSV is dynamically generated based on the last word in the provided URL.
-2. **Reference URL**: Each document entry in the CSV includes the source URL as a reference.
-3. **Data Organization**: Outputs a CSV file with fields such as `document_id`, `title`, `content`, `usage_example`, `category`, `tags`, and `reference`.
-4. **Intermediate Steps**: Stores intermediate files at each processing step for easy debugging and reuse.
-
----
-
-## Workflow
-
-The program is split into multiple scripts, each handling a specific step in the workflow:
-
-### 1. [simple_spider.py](lib/simple_spider.py)
-- Fetches the HTML content from the provided URL.
-- Extracts only the `<div class="td-content">` sections.
-- Saves the raw HTML to an intermediate file in the `data/` folder.
-
-### 2. [clean_html_links.py](lib/clean_html_links.py)
-- Removes all `<a>` tags while keeping the text inside them.
-- Outputs cleaned HTML content to an intermediate file in the `data/` folder.
-
-### 3. [extract_h2.py](lib/extract_h2.py)
-- Extracts `<h2>` sections along with their associated content.
-- Organizes content into logical chunks based on headings.
-- Outputs the extracted content to an intermediate file in the `data/` folder.
-
-### 4. [extract_code_example.py](lib/extract_code_example.py)
-- Extracts code blocks (`<code>` tags) from the HTML and evaluates which to keep based on specific conditions.
-- Inserts placeholders for removed code blocks and appends kept code blocks for further processing.
-- Saves the modified output to an intermediate file in the `data/` folder.
-
-### 5. [clean_all_tags_and_newline.py](lib/clean_all_tags_and_newline.py)
-- Removes all remaining HTML tags from the text.
-- Ensures that each sentence ends with a newline for better readability.
-- Outputs the cleaned content to an intermediate file in the `data/` folder.
-
-### 6. [final_refine.py](lib/final_refine.py)
-- Performs additional formatting and text refinements, such as handling edge cases.
-- Prepares the text for CSV conversion.
-- Outputs the refined text to an intermediate file in the `data/` folder.
-
-### 7. [to_csv.py](lib/to_csv.py)
-- Converts the fully processed text into a structured CSV file.
-- Dynamically generates the `category` column based on the URL (e.g., `Kubernetes_ingress`).
-- Includes the reference URL provided in the `Facade.py` as the `reference` column in the CSV.
-- Saves the final CSV file as `final_output.csv` in the `data/` folder.
+## Table of Contents
+1. Overview
+2. Key Features
+3. Project Structure
+4. Workflow
+5. Usage
+   - Single URL
+   - Multiple URLs
+6. Dependencies
+7. Troubleshooting
+8. Contributing
+9. License
+10. Contact
 
 ---
 
-## Usage
+## 1. Overview
 
-### Running the Entire Workflow
+This project automates the process of extracting, annotating, and transforming content from Kubernetes-related documentation into a structured CSV file. Specifically, it:
+- Scrapes the content from a user-provided URL.
+- Annotates all <a> tags by converting them to a custom inline format (e.g., Some Text [LINK:https://example.com]).
+- Organizes the extracted data into logical sections and code blocks.
+- Removes unnecessary HTML tags and ensures readability.
+- Outputs a CSV file with fields such as title, content, usage examples, category, tags, references, and extracted links.
 
-You can run the entire workflow using the `Facade.py` script, which acts as the main entry point. It orchestrates all the individual scripts and manages intermediate files.
+These steps produce a clean, organized dataset suitable for further analysis or integration with other platforms.
 
-#### Command:
-```bash
-python3 Facade.py
-```
-or
-```bash
-python3 Facade.py --url <website_url>
-```
-### Arguments:
+---
 
-#### `--url`:
-- (Optional) The website URL to scrape. Defaults to Kubernetes Ingress documentation: https://kubernetes.io/docs/concepts/services-networking/ingress/
+## 2. Key Features
 
-#### Example:
-```bash
-python3 Facade.py --url https://kubernetes.io/docs/concepts/services-networking/gateway/
-```
-### Output:
+1. Inline Link Annotations
+   - <a> tags are replaced with [LINK:href] notations, preserving anchor text while making link parsing simpler in subsequent steps.
 
-- The program creates a `data/` folder in the project directory to store all intermediate files.
-- The final output CSV file is saved as: 
-```bash
-data/final_output.csv
-```
+2. CSV “link to” Column
+   - A post-processing script (add_link_to.py) extracts any [LINK:...] annotations from the content and places them in a dedicated “link to” CSV column (with support for relative-link resolution via a base URL).
 
-## Dependencies
+3. Dynamic Category Assignment
+   - The category column in the final CSV is derived from the last word in the URL (e.g., Ingress, Gateway).
 
-### Python Libraries
-- **`requests`**: For fetching HTML from the web.
-- **`beautifulsoup4`**: For parsing and processing HTML content.
-- **`re`**: For regex-based text processing (built into Python, no installation required).
-- **`csv`**: For generating the final CSV output (built into Python, no installation required).
-- **`argparse`**: For handling command-line arguments (built into Python, no installation required).
+4. Reference URL
+   - Each CSV entry includes the original source URL for easy traceability.
 
-### Install Dependencies
-Install all required libraries using:
-```bash
+5. Intermediate Outputs
+   - Each step writes intermediate files to data/ so you can inspect or debug the pipeline.
+
+6. Multiple URL Support
+   - Use Multi_facade.py to run the entire workflow against multiple URLs at once, combining all results into a single CSV.
+
+---
+
+## 3. Project Structure
+
+Below is a simplified layout of the repository:
+
+Facade.py
+Multi_facade.py
+lib/
+  simple_spider.py
+  clean_html_links.py
+  extract_h2.py
+  extract_code_example.py
+  clean_all_tags_and_newline.py
+  final_refine.py
+  to_csv.py
+  add_link_to.py
+data/
+  multi_url.txt (optional list of URLs)
+  ...
+  final_output_<category>.csv (generated by Facade.py)
+  multi_final.csv (generated by Multi_facade.py)
+requirements.txt
+README.md
+
+- Facade.py: Main script orchestrating all the steps for one URL.
+- Multi_facade.py: Higher-level script that runs Facade for multiple URLs and merges the outputs.
+- lib/: Individual Python scripts for each step in the data processing pipeline.
+- data/: Contains intermediate files, final CSV outputs, and an optional list of URLs (multi_url.txt).
+
+---
+
+## 4. Workflow
+
+The workflow is executed in sequential steps. When you run Facade.py, it will:
+
+1. simple_spider.py
+   - Input: --url command-line argument.
+   - Action: Scrapes HTML from the given URL, extracting <div class="td-content"> sections.
+   - Output: data/step1_spider_output.txt
+
+2. clean_html_links.py
+   - Action: Replaces every <a> tag with inner_text [LINK:href].
+   - Output: data/step2_clean_links_output.txt
+
+3. extract_h2.py
+   - Action: Segments the HTML into logical chunks based on <h2> headings.
+   - Output: data/step3_extract_h2_output.txt
+
+4. extract_code_example.py
+   - Action: Identifies and processes <code> blocks, optionally removing or retaining them based on your logic.
+   - Output: data/step4_extract_code_output.txt
+
+5. clean_all_tags_and_newline.py
+   - Action: Strips out any remaining HTML tags and ensures each sentence ends with a newline for readability.
+   - Output: data/step5_clean_tags_output.txt
+
+6. final_refine.py
+   - Action: Applies any final text clean-ups (e.g., removing extra spaces or handling edge cases).
+   - Output: data/step6_final_refine_output.txt
+
+7. to_csv.py
+   - Action: Converts the processed text into a CSV, adding category (derived from the URL) and reference (the original URL).
+   - Output: data/output_initial.csv
+
+8. add_link_to.py
+   - Action: Parses the content column in the CSV for [LINK:...] annotations, removes them from the content, and places them into a new “link to” column. It also makes links clickable by prepending a base URL if needed.
+   - Output: Final CSV file named data/final_output_<category>.csv
+
+---
+
+## 5. Usage
+
+### A. Single URL
+
+Run the workflow end-to-end for a single URL with Facade.py:
+
+python3 Facade.py --url https://kubernetes.io/docs/concepts/services-networking/ingress/
+
+Arguments:
+- --url: The URL to scrape. Defaults to https://kubernetes.io/docs/concepts/services-networking/ingress/ if not provided.
+
+Outputs:
+- Intermediate files in data/stepN_...
+- A final CSV: data/final_output_Kubernetes_ingress.csv (or equivalent category based on the URL).
+
+### B. Multiple URLs
+
+For processing multiple URLs, use Multi_facade.py:
+
+1. Create (or edit) a text file with one URL per line, e.g., data/multi_url.txt.
+2. Run:
+
+python3 Multi_facade.py --input data/multi_url.txt --output data/multi_final.csv
+
+- --input: Points to the file containing multiple URLs (defaults to data/multi_url.txt).
+- --output: The combined CSV with data from all URLs (defaults to data/multi_final.csv).
+
+Process:
+1. For each URL, Multi_facade.py calls Facade.py internally.
+2. It moves each final CSV (e.g., final_output_Kubernetes_ingress.csv, etc.) to a temporary folder.
+3. Once all URLs are processed, it combines them into a single CSV file.
+
+---
+
+## 6. Dependencies
+
+- requests – Fetches HTML from the web.
+- beautifulsoup4 – Parses HTML content.
+- re (built-in) – Regex processing for link annotations and text cleaning.
+- csv (built-in) – Reading and writing CSV files.
+- argparse (built-in) – Handling command-line arguments.
+- shutil (built-in) – Used in Multi_facade.py for folder operations.
+
+Installation:
+
 pip install -r requirements.txt
-```
 
-## Troubleshooting
+---
 
-1. **Error: `No such file or directory`**
-   - Ensure all scripts are located in the `lib/` folder and the `data/` folder exists in the root directory.
+## 7. Troubleshooting
 
-2. **Intermediate Files Missing**
-   - Check the output of each script in the `data/` folder. Verify that each script processes its input correctly.
+1. Missing data/ Folder
+   - The scripts create data/ automatically if it does not exist, but ensure you have write permissions.
 
-3. **Empty CSV File**
-   - Ensure the URL provided to `Facade.py` is valid and contains `<div class="td-content">` sections.
+2. Empty or Corrupted Intermediate Files
+   - Check the console output for errors in earlier steps.
+   - Verify the URL actually contains <div class="td-content"> elements for scraping.
+
+3. Links Are Not Populating
+   - Confirm that <a> tags existed in the scraped content.
+   - Make sure the base URL is correct in Facade.py if you need to convert relative links.
+
+4. Multiple URLs Failing
+   - Confirm each URL in multi_url.txt is valid.
+   - Check if network or SSL errors occur for certain sites.
+
+---
+
+## 8. Contributing
+
+We welcome contributions! You can:
+- Report bugs or suggest features via GitHub issues.
+- Create pull requests to fix issues or add new functionality.
+Please follow any existing templates and guidelines when submitting.
+
+---
+
+## 9. License
+
+(Insert your preferred license here, e.g., MIT License. For example:)
+
+MIT License
+[Full License Text...]
+
+---
+
+## 10. Contact
+
+For questions, suggestions, or feedback:
+- GitHub Issues: https://github.com/YourUserName/YourRepo
+- Email: youremail@example.com
+
+Happy scraping and annotating!
