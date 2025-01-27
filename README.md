@@ -5,18 +5,18 @@ A streamlined pipeline to scrape, clean, annotate links, and convert Kubernetes 
 ---
 
 ## Table of Contents
-1. [Overview](#overview)
-2. [Key Features](#key-features)
-3. [Project Structure](#project-structure)
-4. [Workflow](#workflow)
-5. [Usage](#usage)
+1. [Overview](#1-overview)
+2. [Key Features](#2-key-features)
+3. [Project Structure](#3-project-structure)
+4. [Workflow](#4-workflow)
+5. [Usage](#5-usage)
    - [Single URL](#single-url)
    - [Multiple URLs](#multiple-urls)
-6. [Dependencies](#dependencies)
-7. [Troubleshooting](#troubleshooting)
-8. [Contributing](#contributing)
-9. [License](#license)
-10. [Contact](#contact)
+6. [Dependencies](#6-dependencies)
+7. [Troubleshooting](#7-troubleshooting)
+8. [Contributing](#8-contributing)
+9. [License](#9-license)
+10. [Contact](#10-contact)
 
 
 ---
