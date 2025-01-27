@@ -1,6 +1,7 @@
 import os
 import subprocess
 import argparse
+from urllib.parse import urlparse
 
 def ensure_data_folder():
     """Ensure the 'data' folder exists in the current directory."""
@@ -13,6 +14,14 @@ def extract_category_from_url(url: str) -> str:
     """
     last_word = url.rstrip("/").split("/")[-1]
     return f"Kubernetes_{last_word}"
+
+def extract_base_url(url: str) -> str:
+    """
+    Extracts the base URL (protocol + domain) from the given URL.
+    Example: 'https://kubernetes.io/docs/concepts/' -> 'https://kubernetes.io'
+    """
+    parsed_url = urlparse(url)
+    return f"{parsed_url.scheme}://{parsed_url.netloc}"
 
 def run_workflow(website_url):
     """Runs the entire workflow and stores intermediate files in the 'data' folder."""
@@ -29,6 +38,8 @@ def run_workflow(website_url):
 
     # Extract the category from the URL
     category = extract_category_from_url(website_url)
+    # Extract the base URL
+    base_url = extract_base_url(website_url)
 
     try:
         # Step 1: Run the simple_spider.py script
@@ -63,7 +74,8 @@ def run_workflow(website_url):
         subprocess.run([
             "python3", "lib/add_link_to.py", 
             "--input", initial_csv, 
-            "--output", final_csv
+            "--output", final_csv, 
+            "--base-url", base_url  # Pass the base URL here
         ], check=True)
 
         print(f"Workflow complete! Final output saved to {final_csv}")
