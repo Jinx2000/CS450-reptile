@@ -5,70 +5,86 @@ import argparse
 from bs4 import BeautifulSoup
 
 CHUNK_PATTERN = re.compile(
-    r"(===== CATEGORY CHUNK #\d+ =====.*?========================================)",
+    r"(===== CONCEPT CHUNK #\d+ =====.*?========================================)",
     re.DOTALL
 )
 
-def remove_html_and_split_sentences(text: str) -> str:
+def preserve_code_blocks_and_clean_text(text: str) -> str:
     """
-    Removes all HTML tags, normalizes whitespace, and ensures each sentence
-    ends on a new line. Also treats '========[code block X]========' as its own sentence.
+    Processes the text, preserving the content within code blocks as-is, 
+    while cleaning and formatting the text outside the code blocks.
     """
-    # 1. Remove HTML tags using BeautifulSoup
-    soup = BeautifulSoup(text, "html.parser")
-    clean_text = soup.get_text(separator=" ")  # separate tags with single spaces
+    code_block_pattern = r"\[CODE_BLOCK_START\](.*?)\[CODE_BLOCK_END\]"
+    cleaned_parts = []
+    last_end = 0
 
-    # 2. Collapse multiple whitespace into a single space
+    # Iterate through all code block matches
+    for match in re.finditer(code_block_pattern, text, flags=re.DOTALL):
+        start, end = match.span()
+        code_block_content = match.group(0)  # Preserve the entire block as-is
+
+        # Process the text outside the code block
+        outside_text = text[last_end:start]
+        cleaned_parts.append(clean_text_outside_code(outside_text))
+
+        # Add the preserved code block without modification
+        cleaned_parts.append(code_block_content)
+        last_end = end
+
+    # Process any remaining text after the last code block
+    remaining_text = text[last_end:]
+    cleaned_parts.append(clean_text_outside_code(remaining_text))
+
+    # Join all parts together
+    return "".join(cleaned_parts)
+
+def clean_text_outside_code(text: str) -> str:
+    """
+    Cleans and formats the text outside of code blocks:
+    - Removes HTML tags
+    - Normalizes whitespace
+    - Splits sentences to ensure each ends on a new line
+    """
+    # 1. Remove remaining HTML tags using BeautifulSoup
+    soup = BeautifulSoup(text, "html.parser")
+    clean_text = soup.get_text(separator=" ")  # Separate tags with single spaces
+
+    # 2. Collapse multiple whitespaces into a single space
     clean_text = re.sub(r"\s+", " ", clean_text).strip()
 
-    # 3. Split sentences ending with a period or special code block pattern
+    # 3. Split sentences at periods
     clean_text = re.sub(r"\.(?=\s|$)", ".\n", clean_text)
-    clean_text = re.sub(r"(========\[code block.*?\]========)", r"\n\1\n", clean_text)
 
-    # 4. Clean up any extra blank lines or leading/trailing spaces
+    # 4. Remove extra blank lines
     lines = [line.strip() for line in clean_text.splitlines()]
-    final_text = "\n".join(line for line in lines if line)
+    return "\n".join(line for line in lines if line)
 
-    return final_text
-
-def process_modified_chunk(full_chunk: str) -> str:
+def process_concept_chunk(full_chunk: str) -> str:
     """
-    Processes the '=== Modified Chunk ===' part of a category chunk, removing HTML
-    and splitting sentences while leaving the rest unchanged.
+    Processes a CONCEPT CHUNK, preserving code blocks as-is and cleaning the rest of the content.
     """
-    # Find the start of the Modified Chunk section
-    modified_chunk_start = full_chunk.find("=== Modified Chunk ===")
-    if modified_chunk_start == -1:
-        return full_chunk  # If no Modified Chunk, return as-is
+    # Extract the content after "Content:"
+    content_marker = "Content:"
+    content_start = full_chunk.find(content_marker)
+    if content_start == -1:
+        return full_chunk  # No content found, return as-is
 
-    kept_marker_index = full_chunk.find("=== Kept", modified_chunk_start)
-    end_of_chunk_index = full_chunk.find("========================================", modified_chunk_start)
+    content_to_clean = full_chunk[content_start + len(content_marker):].strip()
 
-    if kept_marker_index == -1:
-        kept_marker_index = end_of_chunk_index
-    if kept_marker_index == -1:
-        return full_chunk
+    # Preserve code blocks and clean text outside them
+    cleaned_content = preserve_code_blocks_and_clean_text(content_to_clean)
 
-    # Split the chunk into parts
-    before_modified = full_chunk[:modified_chunk_start]
-    modified_part = full_chunk[modified_chunk_start:kept_marker_index]
-    after_modified = full_chunk[kept_marker_index:]
+    # Add newlines around [CODE_BLOCK_START] and [CODE_BLOCK_END]
+    cleaned_content = re.sub(r"\[CODE_BLOCK_START\]", r"\n[CODE_BLOCK_START]", cleaned_content)
+    cleaned_content = re.sub(r"\[CODE_BLOCK_END\]", r"[CODE_BLOCK_END]\n", cleaned_content)
 
-    # Extract the heading and content of the Modified Chunk
-    heading_line = "=== Modified Chunk ==="
-    content_start = modified_part.find(heading_line) + len(heading_line)
-    heading_prefix = modified_part[:content_start]
-    content_to_clean = modified_part[content_start:]
-
-    # Clean the content and reassemble the chunk
-    cleaned_content = remove_html_and_split_sentences(content_to_clean)
-    processed_modified_part = heading_prefix + cleaned_content
-
-    return before_modified + processed_modified_part + after_modified
+    # Reassemble the chunk with cleaned content
+    header = full_chunk[:content_start + len(content_marker)].strip()
+    return f"{header}\n\n{cleaned_content}\n"
 
 def process_file(input_file: str, output_file: str) -> None:
     """
-    Reads the file, processes each CATEGORY CHUNK, and writes the output to a file.
+    Reads the file, processes each CONCEPT CHUNK, and writes the output to a file.
     """
     with open(input_file, "r", encoding="utf-8") as infile:
         all_text = infile.read()
@@ -83,7 +99,7 @@ def process_file(input_file: str, output_file: str) -> None:
             processed_output.append(outside_text)
 
         chunk_text = match.group(1)
-        processed_chunk = process_modified_chunk(chunk_text)
+        processed_chunk = process_concept_chunk(chunk_text)
         processed_output.append(processed_chunk)
         last_pos = match.end()
 
