@@ -4,9 +4,28 @@ import argparse
 
 def process_text(text: str) -> str:
     """
-    Removes all exact matches of "==========" from the input text.
+    1. Removes lines that exactly match "==========".
+    2. Replaces [CODE_BLOCK_START] and [CODE_BLOCK_END] with a blank line,
+       keeping the content of the code block intact.
     """
-    return text.replace("==========", "").strip()
+    # Split text into lines
+    lines = text.splitlines()
+    processed_lines = []
+    
+    for line in lines:
+        # Remove exact matches of "=========="
+        if line.strip() == "==========":
+            continue
+        # Replace [CODE_BLOCK_START] and [CODE_BLOCK_END] with blank lines
+        elif line.strip() == "[CODE_BLOCK_START]":
+            processed_lines.append("")  # Add a blank line
+        elif line.strip() == "[CODE_BLOCK_END]":
+            processed_lines.append("")  # Add a blank line
+        else:
+            processed_lines.append(line)  # Keep the line as-is
+
+    # Join the processed lines back into a single string
+    return "\n".join(processed_lines).strip()
 
 def main(input_file: str, output_file: str) -> None:
     """

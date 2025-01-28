@@ -3,145 +3,103 @@ import csv
 import argparse
 
 CHUNK_PATTERN = re.compile(
-    r"(===== CATEGORY CHUNK #\d+ =====.*?========================================)",
+    r"(===== CONCEPT CHUNK #\d+ =====.*?========================================)",
     re.DOTALL
 )
 
-def remove_separators(text: str) -> str:
-    """Remove lines containing '===' or '========================================' from the text."""
-    lines = text.splitlines()
-    filtered_lines = [line for line in lines if "===" not in line and "========================================" not in line]
-    return "\n".join(filtered_lines)
+def extract_topic(full_text: str) -> str:
+    """
+    Extract the topic from the text's first line in the format [TOPIC: ...].
+    """
+    topic_match = re.search(r"\[TOPIC:\s*(.*?)\]", full_text)
+    return topic_match.group(1).strip() if topic_match else "Unknown Topic"
 
-def parse_chunk(chunk_text: str, category: str, reference: str):
-    """Parse CATEGORY CHUNK text to extract title, content, usage examples, etc."""
-    title_match = re.search(r"\[\d+\]\s*Category Title:\s*(.*?)(?=\n|Content:)", chunk_text)
-    title_str = title_match.group(1).strip() if title_match else "Unknown Title"
+def parse_chunk(chunk_text: str, category: str, reference: str, root_url: str):
+    """
+    Parse CONCEPT CHUNK text to extract Concept, Content, and Links.
+    """
+    # Extract Concept and ID
+    concept_match = re.search(r"\[\d+\]\s*Concept:\s*(.*?)\s*\[id:\s*(.*?)\]", chunk_text, re.DOTALL)
+    concept_str = concept_match.group(1).strip() if concept_match else "Unknown Concept"
+    concept_id = concept_match.group(2).strip() if concept_match and concept_match.group(2) else None
 
-    modified_chunk_match = re.search(
-        r"(=== Modified Chunk ===.*?)(?==== Kept|=== No code blocks kept|========================================|$)",
-        chunk_text,
-        re.DOTALL
-    )
-    if not modified_chunk_match:
-        return []
+    # Extract Content
+    content_match = re.search(r"Content:\s*(.*)", chunk_text, re.DOTALL)
+    content_str = content_match.group(1).strip() if content_match else "Unknown Content"
 
-    modified_text = modified_chunk_match.group(1)
+    # Construct full URL for the concept
+    concept_url = f"{reference}#{concept_id}" if concept_id else reference
 
-    content_pos = modified_text.find("Content:")
-    if content_pos != -1:
-        modified_text = modified_text[content_pos + len("Content:"):].strip()
-    else:
-        modified_text = re.sub(r"=== Modified Chunk ===", "", modified_text).strip()
-
-    no_code_kept_match = re.search(r"=== No code blocks kept ===", chunk_text)
-    if no_code_kept_match:
-        content_cleaned = remove_separators(modified_text)
-        return [{
-            "title": title_str,
-            "content": content_cleaned,
-            "usage_example": "None",
-            "category": category,
-            "tags": "None",
-            "reference": reference
-        }]
-
-    kept_section_match = re.search(r"(=== Kept\s*\d+\s*Code Block\(s\) ===.*)", chunk_text, re.DOTALL)
-    if not kept_section_match:
-        content_cleaned = remove_separators(modified_text)
-        return [{
-            "title": title_str,
-            "content": content_cleaned,
-            "usage_example": "None",
-            "category": category,
-            "tags": "None",
-            "reference": reference
-        }]
-
-    kept_section = kept_section_match.group(1)
-
-    placeholder_re = re.compile(r"========\[code block\s*(\d+)\]========")
-    split_parts = placeholder_re.split(modified_text)
-    content_for_block = {}
-    current_block_index = None
-
-    for i, part in enumerate(split_parts):
-        if i % 2 == 0:
-            if current_block_index is not None:
-                content_for_block[current_block_index] += "\n" + part.strip()
+    # Extract links and make them clickable
+    link_pattern = r"\[LINK:(.*?)\]"
+    links = re.findall(link_pattern, content_str)
+    clickable_links = []
+    for link in links:
+        if link.startswith("#"):  # Fragment link
+            clickable_links.append(f"{reference}{link}")
+        elif link.startswith("/"):  # Relative link
+            clickable_links.append(f"{root_url}{link}")
         else:
-            current_block_index = int(part.strip())
-            content_for_block[current_block_index] = ""
+            clickable_links.append(link)  # Unhandled cases (kept as is)
 
-    block_usage_pattern = re.compile(
-        r"\[Code Block\s+(\d+)\]:\s*(.*?)(?=\n\[Code Block\s+\d+\]:|$)",
-        re.DOTALL
-    )
-    usage_for_block = {
-        int(num): content.strip()
-        for num, content in block_usage_pattern.findall(kept_section)
+    # Remove [LINK:...] annotations from the content
+    cleaned_content = re.sub(link_pattern, "", content_str).strip()
+
+    # Return parsed data
+    return {
+        "Concept": concept_str,
+        "Content": cleaned_content,
+        "URL": concept_url,
+        "Link to": "\n".join(clickable_links),
+        "Tags": "None",
+        "Category": category
     }
 
-    documents = []
-    used_block_indices = sorted(usage_for_block.keys())
-    for b_idx in used_block_indices:
-        raw_content = content_for_block.get(b_idx, "").strip()
-        raw_usage = usage_for_block[b_idx]
-
-        cleaned_content = remove_separators(raw_content)
-        cleaned_usage = remove_separators(raw_usage)
-
-        documents.append({
-            "title": title_str,
-            "content": cleaned_content,
-            "usage_example": cleaned_usage,
-            "category": category,
-            "tags": "None",
-            "reference": reference
-        })
-
-    if not documents:
-        cleaned_content = remove_separators(modified_text)
-        return [{
-            "title": title_str,
-            "content": cleaned_content,
-            "usage_example": "None",
-            "category": category,
-            "tags": "None",
-            "reference": reference
-        }]
-
-    return documents
-
-def process_file_to_csv(input_file: str, output_file: str, category: str, reference: str):
-    """Reads a text file containing CATEGORY CHUNK sections and writes them to a CSV file."""
+def process_file_to_csv(input_file: str, output_file: str, category: str, reference: str, root_url: str):
+    """
+    Reads a text file containing CONCEPT CHUNK sections, extracts rows, 
+    and writes them to a CSV file.
+    """
     with open(input_file, "r", encoding="utf-8") as infile:
         all_text = infile.read()
 
+    # Extract the topic from the file
+    topic = extract_topic(all_text)
+
+    # Extract all chunks
     chunks = CHUNK_PATTERN.findall(all_text)
-    all_documents = [doc for chunk in chunks for doc in parse_chunk(chunk, category, reference)]
 
+    # Parse each chunk into a row
+    all_rows = [parse_chunk(chunk, category, reference, root_url) for chunk in chunks]
+
+    # Write the CSV file
     with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile, quoting=csv.QUOTE_ALL)
-        writer.writerow(["document_id", "title", "content", "usage_example", "category", "tags", "reference"])
+        writer = csv.DictWriter(
+            csvfile,
+            fieldnames=["ID", "Category", "Topic", "Concept", "Content", "URL", "Link to", "Tags"]
+        )
+        writer.writeheader()
 
-        for doc_id, doc in enumerate(all_documents, start=1):
-            writer.writerow([
-                doc_id,
-                doc["title"],
-                doc["content"],
-                doc["usage_example"],
-                doc["category"],
-                doc["tags"],
-                doc["reference"]
-            ])
+        # Write rows with a unique ID for each document
+        for idx, row in enumerate(all_rows, start=1):
+            writer.writerow({
+                "ID": idx,
+                "Category": row["Category"],
+                "Topic": topic,
+                "Concept": row["Concept"],
+                "Content": row["Content"],
+                "URL": row["URL"],
+                "Link to": row["Link to"],
+                "Tags": row["Tags"]
+            })
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert processed CATEGORY CHUNK text to a CSV format.")
+    parser = argparse.ArgumentParser(description="Convert processed CONCEPT CHUNK text to a CSV format.")
     parser.add_argument("--input", type=str, required=True, help="Path to the input text file.")
     parser.add_argument("--output", type=str, required=True, help="Path to the output CSV file.")
     parser.add_argument("--category", type=str, required=True, help="Category name to assign to each document.")
-    parser.add_argument("--reference", type=str, required=True, help="Reference URL to include in the CSV.")
+    parser.add_argument("--reference", type=str, required=True, help="Base URL to construct concept-specific links.")
+    parser.add_argument("--root-url", type=str, required=True, help="Root URL to prepend to relative links.")
     args = parser.parse_args()
 
-    process_file_to_csv(args.input, args.output, args.category, args.reference)
+    process_file_to_csv(args.input, args.output, args.category, args.reference, args.root_url)

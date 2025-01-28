@@ -8,13 +8,6 @@ def ensure_data_folder():
     if not os.path.exists("data"):
         os.makedirs("data")
 
-def extract_category_from_url(url: str) -> str:
-    """
-    Extracts the last word of the URL (e.g., 'ingress' or 'gateway') to form the category.
-    """
-    last_word = url.rstrip("/").split("/")[-1]
-    return f"Kubernetes_{last_word}"
-
 def extract_base_url(url: str) -> str:
     """
     Extracts the base URL (protocol + domain) from the given URL.
@@ -34,12 +27,12 @@ def run_workflow(website_url):
     extract_code_output = "data/step4_extract_code_output.txt"
     clean_tags_output = "data/step5_clean_tags_output.txt"
     refined_output = "data/step6_final_refine_output.txt"
-    initial_csv = "data/output_initial.csv"
+    final_csv = "data/final_output.csv"
 
-    # Extract the category from the URL
-    category = extract_category_from_url(website_url)
-    # Extract the base URL
-    base_url = extract_base_url(website_url)
+    # Category is hardcoded to 'Kubernetes'
+    category = "Kubernetes"
+    # Extract the base URL (e.g., https://kubernetes.io)
+    root_url = extract_base_url(website_url)
 
     try:
         # Step 1: Run the simple_spider.py script
@@ -60,22 +53,14 @@ def run_workflow(website_url):
         # Step 6: Run the final_refine.py script
         subprocess.run(["python3", "lib/final_refine.py", "--input", clean_tags_output, "--output", refined_output], check=True)
 
-        # Step 7: Generate initial CSV with to_csv.py
+        # Step 7: Generate the final CSV with to_csv.py
         subprocess.run([
-            "python3", "lib/to_csv.py", 
-            "--input", refined_output, 
-            "--output", initial_csv, 
-            "--category", category, 
-            "--reference", website_url
-        ], check=True)
-
-        # Step 8: Add links to the final CSV
-        final_csv = f"data/final_output_{category}.csv"
-        subprocess.run([
-            "python3", "lib/add_link_to.py", 
-            "--input", initial_csv, 
-            "--output", final_csv, 
-            "--base-url", base_url  # Pass the base URL here
+            "python3", "lib/to_csv.py",
+            "--input", refined_output,
+            "--output", final_csv,
+            "--category", category,
+            "--reference", website_url,
+            "--root-url", root_url  # Pass root URL for relative links
         ], check=True)
 
         print(f"Workflow complete! Final output saved to {final_csv}")
