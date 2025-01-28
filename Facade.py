@@ -16,6 +16,13 @@ def extract_base_url(url: str) -> str:
     parsed_url = urlparse(url)
     return f"{parsed_url.scheme}://{parsed_url.netloc}"
 
+def extract_topic_from_url(url: str) -> str:
+    """
+    Extract the topic (last part of the URL path) from the input URL.
+    Example: 'https://kubernetes.io/docs/concepts/services-networking/ingress/' -> 'ingress'
+    """
+    return url.rstrip("/").split("/")[-1].capitalize()
+
 def run_workflow(website_url):
     """Runs the entire workflow and stores intermediate files in the 'data' folder."""
     ensure_data_folder()
@@ -27,7 +34,10 @@ def run_workflow(website_url):
     extract_code_output = "data/step4_extract_code_output.txt"
     clean_tags_output = "data/step5_clean_tags_output.txt"
     refined_output = "data/step6_final_refine_output.txt"
-    final_csv = "data/final_output.csv"
+
+    # Extract the topic and construct the final CSV name
+    topic = extract_topic_from_url(website_url)
+    final_csv = f"data/final_output_{topic}.csv"
 
     # Category is hardcoded to 'Kubernetes'
     category = "Kubernetes"
