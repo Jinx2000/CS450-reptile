@@ -12,11 +12,6 @@ def ensure_data_folder():
         shutil.rmtree(temp_folder)
     os.makedirs(temp_folder)
 
-def extract_category_from_url(url: str) -> str:
-    """Extracts the last word of the URL (e.g., 'ingress' or 'gateway') to form the category."""
-    last_word = url.rstrip("/").split("/")[-1]
-    return f"Kubernetes_{last_word}"
-
 def create_default_url_file(input_file: str):
     """Create a default multi_url.txt file if it doesn't exist."""
     default_urls = [
@@ -29,20 +24,32 @@ def create_default_url_file(input_file: str):
             f.write("\n".join(default_urls))
         print(f"Default URL file created at {input_file}")
 
-def run_facade_for_url(website_url, output_csv):
+def extract_topic_from_url(url: str) -> str:
+    """Extracts the last word of the URL (e.g., 'ingress' or 'gateway') to form the topic."""
+    last_word = url.rstrip("/").split("/")[-1]
+    return last_word.capitalize()
+
+def run_facade_for_url(website_url: str):
     """Run the Facade.py workflow for a single URL."""
+    # Run Facade.py for the given URL
     subprocess.run([
         "python3", "Facade.py",
         "--url", website_url
     ], check=True)
 
-    # Move the final CSV from the Facade to the temp folder
-    category = extract_category_from_url(website_url)
-    temp_csv = f"data/multi_temp_csv/final_output_{category}.csv"
-    os.rename(f"data/final_output_{category}.csv", temp_csv)
+    # Identify the expected output file
+    topic = extract_topic_from_url(website_url)
+    generated_csv = f"data/final_output_{topic}.csv"
+
+    if not os.path.exists(generated_csv):
+        raise FileNotFoundError(f"Expected output CSV not found: {generated_csv}")
+
+    # Move the generated CSV to the temp folder
+    temp_csv = f"data/multi_temp_csv/final_output_{topic}.csv"
+    os.rename(generated_csv, temp_csv)
     return temp_csv
 
-def combine_csvs(output_csvs, final_csv):
+def combine_csvs(output_csvs: list, final_csv: str):
     """Combine all individual CSVs into one final CSV."""
     header_written = False
 
@@ -66,7 +73,7 @@ def combine_csvs(output_csvs, final_csv):
 
     print(f"Combined CSV saved to {final_csv}")
 
-def run_multi_facade(input_file, final_csv):
+def run_multi_facade(input_file: str, final_csv: str):
     """Run the Facade workflow for multiple URLs and combine the results."""
     ensure_data_folder()
     create_default_url_file(input_file)
@@ -81,8 +88,10 @@ def run_multi_facade(input_file, final_csv):
     for url in urls:
         try:
             print(f"Processing URL: {url}")
-            temp_csv = run_facade_for_url(url, output_csvs)
+            temp_csv = run_facade_for_url(url)
             output_csvs.append(temp_csv)
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
         except subprocess.CalledProcessError as e:
             print(f"Error processing URL {url}: {e}")
 
