@@ -14,6 +14,7 @@ A streamlined pipeline to scrape, clean, annotate links, and convert Kubernetes 
    - [Multiple URLs](#multiple-urls)
 6. [Dependencies](#6-dependencies)
 7. [Troubleshooting](#7-troubleshooting)
+8. [Known Issues](#8-known-issues)
 
 ---
 
@@ -185,3 +186,8 @@ pip install -r requirements.txt
    - Check if network or SSL errors occur for certain sites.
 
 ---
+
+## 7. Known Issues
+
+1. **Duplication**
+   - When testing on large url set (700+), there's 53 duplicate concepts detected, the reason remians unclear, I suspect might be an issue with the url set. 1/28/2025.
